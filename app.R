@@ -8,7 +8,7 @@ library(dplyr)
 library(ggplot2)
 
 ui <- dashboardPage(
-        dashboardHeader(title = "Courier Performance Dashoard"),
+        dashboardHeader(title = "Courier Performance"),
         # SideBar Content
         dashboardSidebar(
                 sidebarMenu(
@@ -32,8 +32,8 @@ ui <- dashboardPage(
                                 ),
                                 fluidRow(
                                         box(
-                                                title = "Controls",
-                                                sliderInput("slider", "Number of observations:", 1, 100, 50)
+                                                title = "Scan Type Filter",
+                                                uiOutput("scanTypeFilter")
                                         )
                                 ) 
                         ),
@@ -51,6 +51,11 @@ server <- function(input, output) {
         data$scan_type <- data$`Scan Type`
         # create factor for use in plots
         data$scan_type <- as.factor(data$scan_type)
+        
+        # dynamically generate dropdown list plot filter for 'scan_type'
+        output$scanTypeFilter <- renderUI({
+                selectInput("scantype", "Scan Type", sort(unique(data$scan_type)))
+        })
         
         output$scanSummary <- renderPlot({
                 ggplot(data, aes(scan_type)) +
