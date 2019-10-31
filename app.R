@@ -35,10 +35,7 @@ ui <- dashboardPage(
                                 h2("KPIs"),
                                 # Boxes need to be put in a row or column.
                                 fluidRow(
-                                        box(
-                                                valueBoxOutput("run_num_box"),
-                                                width = 12
-                                        )
+                                        valueBoxOutput("run_num_box")
                                 ),
                                 fluidRow(
                                          box(title = "Scans Summary for WCP301 for Aug Sep 2019",
@@ -72,8 +69,8 @@ server <- function(input, output) {
         
         output$run_num_box <- renderValueBox({
                 valueBox(
+                        subtitle =  "Run Number",
                         as.character(unique(data$`Run No.`)),
-                        "Run Number:",
                         icon = icon("list"),
                         color = "purple"
                 )
