@@ -7,6 +7,7 @@ library(tidyverse)
 library(readxl)
 library(dplyr)
 library(ggplot2)
+library(DT)
 
 
 # set up data source
@@ -34,18 +35,25 @@ ui <- dashboardPage(
                                 h2("KPIs"),
                                 # Boxes need to be put in a row or column.
                                 fluidRow(
+                                        box(
+                                                valueBoxOutput("run_num_box"),
+                                                width = 12
+                                        )
+                                ),
+                                fluidRow(
                                          box(title = "Scans Summary for WCP301 for Aug Sep 2019",
                                              solidHeader = TRUE,
                                              status = "primary",
-                                             width = 12,
-                                             plotOutput("scanSummaryPlot", height = 250))
-                                        
+                                             width = 6,
+                                             plotOutput("scanSummaryPlot", height = 250)),
+                                         box(title = "Scan Type Filter",
+                                             width = 6,
+                                             uiOutput("scanTypeFilter")
+                                         )
                                 ),
                                 fluidRow(
-                                        box(
-                                                title = "Scan Type Filter",
-                                                uiOutput("scanTypeFilter")
-                                        )
+                                        # infoBoxOutput("scanTypeCount", width = 3)
+                                        DT::dataTableOutput(outputId = "st_summary")                                        
                                 ) 
                         ),
                         tabItem(tabName = "widgets",
@@ -62,7 +70,16 @@ server <- function(input, output) {
                             selected = "Out for Delivery")
         })
         
-        # apply the filter to plot data
+        output$run_num_box <- renderValueBox({
+                valueBox(
+                        as.character(unique(data$`Run No.`)),
+                        "Run Number:",
+                        icon = icon("list"),
+                        color = "purple"
+                )
+        })
+        
+        # Apply the filter to plot data
         filtered <- reactive({
                 if (is.null(input$scanTypeInput)){
                         return(NULL)
@@ -70,8 +87,31 @@ server <- function(input, output) {
                 
                 data %>% 
                         filter(scan_type == input$scanTypeInput)
+                
         })
         
+        # Calculate summary table of scan type values unique counts (e.g., 'Delivery: 1200', 'Attempted Delivery: 37' ...)
+        st_count <- reactive({
+                data %>% 
+                        group_by(`Scan Type`) %>% 
+                        summarize(count=n())                
+        })
+
+        # Display summary table data
+        output$st_summary <- renderDataTable({
+                st_count()
+        })
+        
+        
+        # scanTypeCounts <- ddply(data, ~scan_type, summarise, number_of_distinct_scans = length(unique(scan_type)))
+        # output$scanTypeCount <- renderInfoBox({
+               # infoBox(title = "ST Count", data , subtitle = "Count of distinct Scan Types")
+               # })
+        # agg <- aggregate(data, by = list(data$scan_type), FUN = count)
+        # output$agg <- renderText(scanTypeCount)
+        
+        
+
         # render plot to display
         output$scanSummaryPlot <- renderPlot({
                 if (is.null(filtered())) {
@@ -81,7 +121,7 @@ server <- function(input, output) {
                 ggplot(filtered(), aes(scan_type)) +
                         theme_classic() +
                         # coord_flip() +
-                        geom_bar(fill = "#FFDB6D", stat = "count") +
+                        geom_bar(fill = "steelblue4", stat = "count") +
                         labs(x = "Scan Type")
         })
 }
