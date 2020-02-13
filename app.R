@@ -8,6 +8,7 @@ library(readxl)
 library(dplyr)
 library(ggplot2)
 library(DT)
+library(lubridate)
 
 
 # set up data source
@@ -17,6 +18,8 @@ data$scan_type <- data$`Scan Type`
 # create factor for use in plots
 data$scan_type <- as.factor(data$scan_type)
 
+# Separate out date component for day for later plotting
+data$scan_day <- day(data$`Scan Date`)
 
 
 ui <- dashboardPage(
@@ -25,7 +28,7 @@ ui <- dashboardPage(
         dashboardSidebar(
                 sidebarMenu(
                         menuItem("KPIs", tabName = "KPIs", icon = icon("chart-line")),
-                        menuItem("Widgets", tabName = "widgets", icon = icon("th"))
+                        menuItem("Time Analysis", tabName = "widgets", icon = icon("th"))
                 )
         ),
         dashboardBody(
@@ -54,11 +57,13 @@ ui <- dashboardPage(
                                 ) 
                         ),
                         tabItem(tabName = "widgets",
-                                h2("Widgets Tab Content")
+                                h2("Performance over Time"),
+                                fluidRow(
+                                        plotOutput("scanDetailPlot", height = 250))
+                                )
                         )
                 )
         )        
-)
 
 server <- function(input, output) {
         # dynamically generate dropdown list plot filter for 'scan_type'
@@ -95,19 +100,10 @@ server <- function(input, output) {
         })
 
         # Display summary table data
-        output$st_summary <- renderDataTable({
-                st_count()
-        })
-        
-        
-        # scanTypeCounts <- ddply(data, ~scan_type, summarise, number_of_distinct_scans = length(unique(scan_type)))
-        # output$scanTypeCount <- renderInfoBox({
-               # infoBox(title = "ST Count", data , subtitle = "Count of distinct Scan Types")
-               # })
-        # agg <- aggregate(data, by = list(data$scan_type), FUN = count)
-        # output$agg <- renderText(scanTypeCount)
-        
-        
+        output$st_summary <- DT::renderDataTable(datatable(
+                st_count(), filter = 'top', rownames = FALSE, options = list(sDom  = '<"top">lrt<"bottom">')
+        ))
+
 
         # render plot to display
         output$scanSummaryPlot <- renderPlot({
@@ -120,6 +116,17 @@ server <- function(input, output) {
                         # coord_flip() +
                         geom_bar(fill = "steelblue4", stat = "count") +
                         labs(x = "Scan Type")
+        })
+        
+        
+        counts <- data %>% group_by('Scan Date') %>% summarize(count=n())
+        
+        output$scanDetailPlot <- renderPlot({
+                ggplot(data, aes(fill = 'Scan Type', x = 'Scan Date', y = counts)) +
+                        theme_classic() +
+                        # coord_flip() +
+                        geom_bar(position = "dodge") +
+                        labs(x = "Scan Date")
         })
 }
 
